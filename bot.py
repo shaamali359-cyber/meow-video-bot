@@ -5,10 +5,20 @@ from pathlib import Path
 
 import yt_dlp
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters
+)
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("أهلاً بك 🎬\nأرسل رابط الفيديو لتحميله.")
+    await update.message.reply_text(
+        "أهلاً بك 🎬\nأرسل رابط الفيديو لتحميله."
+    )
+
 
 async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
@@ -41,17 +51,33 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_video(video=video)
 
     except Exception:
-        await update.message.reply_text("تعذر تحميل الفيديو. جرّب رابطاً آخر.")
+        await update.message.reply_text(
+            "تعذر تحميل الفيديو. جرّب رابطاً آخر."
+        )
+
 
 def main():
     token = os.getenv("BOT_TOKEN")
-    if not token:
-        raise RuntimeError("BOT_TOKEN غير موجود")
+    hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+    port = int(os.getenv("PORT", "10000"))
+
+    if not token or not hostname:
+        raise RuntimeError("إعدادات التشغيل غير مكتملة")
 
     app = Application.builder().token(token).build()
+
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download))
-    app.run_polling()
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, download)
+    )
+
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=token,
+        webhook_url=f"https://{hostname}/{token}"
+    )
+
 
 if __name__ == "__main__":
     main()
